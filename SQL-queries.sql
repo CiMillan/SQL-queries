@@ -460,6 +460,97 @@ JOIN region r
 GROUP BY r.name
 ORDER BY reps;
 
+/*For each account, determine the average amount of each type of paper they purchased across their orders. Your result should have four columns - one for the account name and one for the average quantity purchased for each of the paper types for each account.*/
+
+SELECT 
+	a.name,
+    AVG(o.standard_qty) avg_stand,
+    AVG(o.gloss_qty) avg_gloss,
+    AVG(o.poster_qty) avg_post
+FROM accounts a
+JOIN orders o
+	ON a.id = o.account_id
+GROUP BY a.name
+ORDER BY a.name;
+
+/*For each account, determine the average amount spent per order on each paper type. Your result should have four columns - one for the account name and one for the average amount spent on each paper type.*/
+
+SELECT 
+	a.name,
+    AVG(o.standard_amt_usd) avg_usd_stand,
+    AVG(o.gloss_amt_usd) avg_usd_gloss,
+    AVG(o.poster_amt_usd) avg_usd_post
+FROM accounts a
+JOIN orders o
+	ON a.id = o.account_id
+GROUP BY a.name
+ORDER BY a.name;
+
+/*Determine the number of times a particular channel was used in the web_events table for each sales rep. Your final table should have three columns - the name of the sales rep, the channel, and the number of occurrences. Order your table with the highest number of occurrences first.*/
+
+SELECT s.name, w.channel, COUNT(*) num_events
+FROM sales_reps s
+JOIN accounts a
+	ON s.id = a.sales_rep_id
+JOIN web_events w
+	ON w.account_id = a.id
+GROUP BY s.name, w.channel
+ORDER BY num_events DESC;
+
+/*Determine the number of times a particular channel was used in the web_events table for each region. Your final table should have three columns - the region name, the channel, and the number of occurrences. Order your table with the highest number of occurrences first.*/
+
+SELECT r.name, w.channel, COUNT(*) num_events
+FROM region r
+JOIN sales_reps s
+	ON r.id = s.region_id
+JOIN accounts a
+	ON s.id = a.sales_rep_id
+JOIN web_events w
+	ON w.account_id = a.id
+GROUP BY r.name, w.channel
+ORDER BY num_events DESC;
+
+/*Use DISTINCT to test if there are any accounts associated with more than one region.*/
+/*The below two queries have the same number of resulting rows (351), so we know that every account is associated with only one region. If each account was associated with more than one region, the first query should have returned more rows than the second query.*/
+
+SELECT
+	r.name AS region,
+    a.name AS account,
+    r.id AS region_id,
+    a.id AS account_id
+FROM accounts a
+JOIN sales_reps s
+	ON s.id = a.sales_rep_id
+JOIN region r
+	ON s.region_id = r.id
+
+SELECT DISTINCT id, name
+FROM accounts;
+
+/*Have any sales reps worked on more than one account?*/
+/*Actually all of the sales reps have worked on more than one account. The fewest number of accounts any sales rep works on is 3. There are 50 sales reps, and they all have more than one account. Using DISTINCT in the second query assures that all of the sales reps are accounted for in the first query.*/
+
+SELECT s.name rep_name, s.id rep_id, COUNT(*) num_accounts
+FROM sales_reps s
+JOIN accounts a
+	ON a.sales_rep_id = s.id
+GROUP BY rep_name, rep_id
+ORDER BY num_accounts DESC;
+
+SELECT DISTINCT id, name
+FROM sales_reps;
+
+/*How many of the sales reps have more than 5 accounts that they manage?*/
+
+SELECT s.name, COUNT(*) num_accounts
+FROM sales_reps s
+JOIN accounts a
+	ON a.sales_rep_id = s.id
+GROUP BY s.name
+HAVING COUNT(*) > 5
+ORDER BY num_accounts;
+
+
 
 
 
