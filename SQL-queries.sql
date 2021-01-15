@@ -550,6 +550,108 @@ GROUP BY s.name
 HAVING COUNT(*) > 5
 ORDER BY num_accounts;
 
+/*How many accounts have more than 20 orders?*/
+
+SELECT a.name, COUNT(*) num_orders
+FROM orders o
+JOIN accounts a
+	ON o.account_id = a.id
+GROUP BY a.name
+HAVING COUNT(*) > 20
+ORDER BY num_orders;
+
+/*Which account has the most orders?*/
+
+SELECT a.name, COUNT(*) num_orders
+FROM orders o
+JOIN accounts a
+	ON o.account_id = a.id
+GROUP BY a.name
+ORDER BY num_orders DESC
+LIMIT 1;
+
+/*Which accounts spent more than 30,000 usd total across all orders?*/
+
+SELECT a.name, SUM(O.total_amt_usd) total_spent
+FROM orders o
+JOIN accounts a
+	ON o.account_id = a.id
+GROUP BY a.name
+HAVING SUM(total_amt_usd) > '30000'
+ORDER BY total_spent DESC;
+
+/*Which accounts spent less than 1,000 usd total across all orders?*/
+
+SELECT a.name, SUM(O.total_amt_usd) total_spent
+FROM orders o
+JOIN accounts a
+	ON o.account_id = a.id
+GROUP BY a.name
+HAVING SUM(total_amt_usd) < '1000'
+ORDER BY total_spent;
+
+/*Which account has spent the most with us?*/
+
+SELECT a.name, SUM(O.total_amt_usd) total_spent
+FROM orders o
+JOIN accounts a
+	ON o.account_id = a.id
+GROUP BY a.name
+ORDER BY total_spent DESC
+LIMIT 1;
+
+/*Which account has spent the least with us?*/
+
+SELECT a.name, SUM(O.total_amt_usd) total_spent
+FROM orders o
+JOIN accounts a
+	ON o.account_id = a.id
+GROUP BY a.name
+ORDER BY total_spent
+LIMIT 1;
+
+/*Which accounts used facebook as a channel to contact customers more than 6 times?*/
+
+SELECT a.name, w.channel, COUNT(*) events_num
+FROM web_events w
+JOIN accounts a
+	ON w.account_id = a.id
+GROUP BY a.name, w.channel
+HAVING w.channel = 'facebook' AND COUNT(*) > 6
+ORDER BY events_num;
+
+/*Which account used facebook most as a channel?*/
+
+SELECT a.name, w.channel, COUNT(*) events_num
+FROM web_events w
+JOIN accounts a
+	ON w.account_id = a.id
+WHERE w.channel = 'facebook'
+GROUP BY a.name, w.channel
+ORDER BY events_num DESC
+LIMIT 1;
+
+/*Which channel was most frequently used by most accounts?*/
+
+SELECT a.name, w.channel, COUNT(*) events_num
+FROM web_events w
+JOIN accounts a
+	ON w.account_id = a.id
+GROUP BY a.name, w.channel
+ORDER BY events_num DESC;
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
