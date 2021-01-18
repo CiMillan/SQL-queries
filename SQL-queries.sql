@@ -772,6 +772,85 @@ GROUP BY 1
 ORDER BY 3 DESC;
 
 
+/************************SUBQUERIES**********************/
+
+
+/*We want to find the average number of events for each day for each channel. The first table will provide us the number of events for each day and channel, and then we will need to average these values together using a second query.*/
+
+SELECT channel, AVG(events) AS avg_events
+FROM
+	(SELECT
+		DATE_TRUNC('day', occurred_at) AS day,
+		channel,
+		COUNT(*) AS events
+	FROM web_events
+	GROUP BY 1, 2) sub
+GROUP BY 1
+ORDER BY 2 DESC;
+
+/*pull the first month/year combo from the orders table. And then pull the average for each type of paper in this month/year*/
+
+SELECT AVG(standard_qty) avg_std, AVG(gloss_qty) avg_gls, AVG(poster_qty) avg_pst
+FROM orders
+WHERE DATE_TRUNC('month', occurred_at) = 
+     (SELECT DATE_TRUNC('month', MIN(occurred_at)) FROM orders);
+
+/*and the total amount in sales in the same month/year*/
+
+SELECT SUM(total_amt_usd)
+FROM orders
+WHERE DATE_TRUNC('month', occurred_at) = 
+      (SELECT DATE_TRUNC('month', MIN(occurred_at)) FROM orders);
+
+/*Provide the name of the sales_rep in each region with the largest amount of total_amt_usd sales.*/
+
+SELECT *
+FROM
+  (SELECT region AS region, MAX(total_sales) AS total_sales
+  FROM
+    (SELECT r.name AS region, s.name AS rep, SUM(o.total_amt_usd) AS total_sales
+    FROM region r
+    JOIN sales_reps s
+        ON s.region_id = r.id
+    JOIN accounts a
+        ON a.sales_rep_id = s.id
+    JOIN orders o
+        ON a.id = o.account_id
+    GROUP BY 1, 2) T1
+  GROUP BY 1
+  ORDER BY 2 DESC) T2
+JOIN
+	(SELECT r.name AS region, s.name AS rep, SUM(o.total_amt_usd) AS total_sales
+    FROM region r
+    JOIN sales_reps s
+        ON s.region_id = r.id
+    JOIN accounts a
+        ON a.sales_rep_id = s.id
+    JOIN orders o
+        ON a.id = o.account_id
+    GROUP BY 1, 2) T3
+ON t3.region = t2.region AND t3.total_sales = t2.total_sales;
+
+/*For the region with the largest (sum) of sales total_amt_usd, how many total (count) orders were placed?*/
+
+
+/*How many accounts had more total purchases than the account name which has bought the most standard_qty paper throughout their lifetime as a customer?*/
+
+
+/*For the customer that spent the most (in total over their lifetime as a customer) total_amt_usd, how many web_events did they have for each channel?*/
+
+
+/*What is the lifetime average amount spent in terms of total_amt_usd for the top 10 total spending accounts?*/
+
+
+/*What is the lifetime average amount spent in terms of total_amt_usd, including only the companies that spent more per order, on average, than the average of all orders.*/
+
+
+
+
+
+
+
 
 
 
