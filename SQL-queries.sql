@@ -804,31 +804,37 @@ WHERE DATE_TRUNC('month', occurred_at) =
 
 /*Provide the name of the sales_rep in each region with the largest amount of total_amt_usd sales.*/
 
+WITH t1 AS (
+	SELECT r.name AS region, s.name AS rep, SUM(o.total_amt_usd) AS total_sales
+	FROM region r
+	JOIN sales_reps s
+		ON s.region_id = r.id
+	JOIN accounts a
+		ON a.sales_rep_id = s.id
+	JOIN orders o
+		ON a.id = o.account_id
+	GROUP BY 1, 2),
+
+    t2 AS (
+	SELECT region AS region, MAX(total_sales) AS total_sales
+	FROM t1  
+	GROUP BY 1
+	ORDER BY 2 DESC),
+
+	t3 AS (
+	SELECT r.name AS region, s.name AS rep, SUM(o.total_amt_usd) AS total_sales
+	FROM region r
+	JOIN sales_reps s
+		ON s.region_id = r.id
+	JOIN accounts a
+		ON a.sales_rep_id = s.id
+	JOIN orders o
+		ON a.id = o.account_id
+	GROUP BY 1, 2)
+
 SELECT *
-FROM
-  (SELECT region AS region, MAX(total_sales) AS total_sales
-  FROM
-    (SELECT r.name AS region, s.name AS rep, SUM(o.total_amt_usd) AS total_sales
-    FROM region r
-    JOIN sales_reps s
-        ON s.region_id = r.id
-    JOIN accounts a
-        ON a.sales_rep_id = s.id
-    JOIN orders o
-        ON a.id = o.account_id
-    GROUP BY 1, 2) T1
-  GROUP BY 1
-  ORDER BY 2 DESC) T2
-JOIN
-	(SELECT r.name AS region, s.name AS rep, SUM(o.total_amt_usd) AS total_sales
-    FROM region r
-    JOIN sales_reps s
-        ON s.region_id = r.id
-    JOIN accounts a
-        ON a.sales_rep_id = s.id
-    JOIN orders o
-        ON a.id = o.account_id
-    GROUP BY 1, 2) T3
+FROM t2
+JOIN t3
 ON t3.region = t2.region AND t3.total_sales = t2.total_sales
 ORDER BY t3.total_sales DESC;
 
@@ -848,69 +854,81 @@ SELECT r.name, COUNT(*) AS order_count, SUM(total_amt_usd)
 
 /*How many accounts had more total purchases than the account name which has bought the most standard_qty paper throughout their lifetime as a customer?*/
 
+WITH t1 AS (
+	SELECT a.name AS account, SUM(o.standard_qty) AS total_std, SUM(o.total) AS total_orders
+	FROM accounts a
+	JOIN orders o
+	ON o.account_id = a.id
+	GROUP BY 1
+	ORDER BY 2 DESC),
+
+    t2 AS (SELECT a.name AS account, SUM(o.total) AS total_orders
+	FROM accounts a
+	JOIN orders o 
+		ON o.account_id = a.id
+	GROUP BY 1
+	HAVING SUM(o.total) > 
+		(SELECT MAX(total_std) AS max_std
+		FROM t1)
+	ORDER BY 2 DESC)
+
 SELECT COUNT(*)
-FROM
-  (SELECT a.name AS account, SUM(o.total) AS total_orders
-  FROM accounts a
-  JOIN orders o 
-      ON o.account_id = a.id
-  GROUP BY 1
-  HAVING SUM(o.total) > 
-    (SELECT MAX(total_std) AS max_std
-    FROM
-      (SELECT a.name AS account, SUM(o.standard_qty) AS total_std, SUM(o.total) AS total_orders
-       FROM accounts a
-       JOIN orders o
-       ON o.account_id = a.id
-       GROUP BY 1
-       ORDER BY 2 DESC) T1)
-  ORDER BY 2 DESC) T2;
+FROM t2;
 
 /*For the customer that spent the most (in total over their lifetime as a customer) total_amt_usd, how many web_events did they have for each channel?*/
 
+WITH t1 AS (
+	SELECT a.name account, SUM(total_amt_usd) total_usd
+	FROM orders o
+	JOIN accounts a
+		ON a.id = o.account_id
+	GROUP BY 1
+	ORDER BY 2 DESC
+	LIMIT 1),
+
+	t2 AS (
+	SELECT a.name account, w.channel, COUNT(*) events
+	FROM accounts a
+	JOIN web_events w
+		ON a.id = w.account_id
+	GROUP BY 1, 2)
+
 SELECT t2.account account_name, channel, events
-FROM
-  (SELECT a.name account, w.channel, COUNT(*) events
-  FROM accounts a
-  JOIN web_events w
-      ON a.id = w.account_id
-  GROUP BY 1, 2) T2
-JOIN
-  (SELECT a.name account, SUM(total_amt_usd) total_usd
-  FROM orders o
-  JOIN accounts a
-      ON a.id = o.account_id
-  GROUP BY 1
-  ORDER BY 2 DESC
-  LIMIT 1) T1
+FROM t2
+JOIN t1
 ON t1.account = t2.account
 ORDER BY 3 DESC;
 
 /*What is the lifetime average amount spent in terms of total_amt_usd for the top 10 total spending accounts?*/
 
+WITH t1 AS (
+	SELECT a.name account, SUM(total_amt_usd) total_orders
+	FROM orders o 
+	JOIN accounts a
+		ON a.id = o.account_id
+	GROUP BY 1
+	ORDER BY 2 DESC
+	LIMIT 10)
+
 SELECT AVG(total_orders)
-FROM 
-  (SELECT a.name account, SUM(total_amt_usd) total_orders
-  FROM orders o 
-  JOIN accounts a
-      ON a.id = o.account_id
-  GROUP BY 1
-  ORDER BY 2 DESC
-  LIMIT 10) T1;
+FROM t1;
 
 /*What is the lifetime average amount spent in terms of total_amt_usd, including only the companies that spent more per order, on average, than the average of all orders.*/
 
-SELECT AVG (avg_amt)
-FROM
-  (SELECT a.name, AVG(total_amt_usd) avg_amt
-  FROM orders o
-  JOIN accounts a
-      ON a.id = o.account_id
-  GROUP BY 1
-  HAVING AVG(total_amt_usd) > (SELECT AVG(total_amt_usd) avg_all
-  FROM orders T1)
-  ORDER BY 2 DESC) T2;
-  
+WITH t1 AS (
+   SELECT AVG(o.total_amt_usd) avg_all
+   FROM orders o
+   JOIN accounts a
+   ON a.id = o.account_id),
+
+	t2 AS (
+   SELECT o.account_id, AVG(o.total_amt_usd) avg_amt
+   FROM orders o
+   GROUP BY 1
+   HAVING AVG(o.total_amt_usd) > (SELECT * FROM t1))
+SELECT AVG(avg_amt)
+FROM t2;
+
 
 
 
