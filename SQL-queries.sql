@@ -983,6 +983,113 @@ SELECT name,
     RIGHT(name, LENGTH(name) - POSITION(' ' IN name)) AS last_name
 FROM sales_reps;
 
+/*Each company in the accounts table wants to create an email address for each primary_poc. The email address should be the first name of the primary_poc . last name primary_poc @ company name .com.*/
+
+WITH t1 AS (
+	SELECT name, primary_poc,
+	POSITION(' ' IN primary_poc) as space_position,
+    LEFT(primary_poc, POSITION(' ' IN primary_poc) - 1) AS first_name,
+    RIGHT(primary_poc, LENGTH(primary_poc) -POSITION(' ' IN primary_poc)) AS last_name
+FROM accounts)
+          
+SELECT first_name, last_name, CONCAT(first_name, '.', last_name, '@', name, '.com') AS email
+FROM t1;
+
+/*You may have noticed that in the previous solution some of the company names include spaces, which will certainly not work in an email address. See if you can create an email address that will work by removing all of the spaces in the account name, and put every letter lowercase.*/
+
+WITH t1 AS (
+	SELECT name, primary_poc,
+	POSITION(' ' IN primary_poc) as space_position,
+    LEFT(primary_poc, POSITION(' ' IN primary_poc) - 1) AS first_name,
+    RIGHT(primary_poc, LENGTH(primary_poc) -POSITION(' ' IN primary_poc)) AS last_name
+FROM accounts)
+          
+SELECT first_name, last_name, CONCAT(LOWER(first_name), '.', LOWER(last_name), '@', REPLACE(LOWER(name), ' ', ''), '.com') AS email
+FROM t1;
+
+/*We would also like to create an initial password, which they will change after their first log in. The first password will be the first letter of the primary_poc's first name (lowercase), then the last letter of their first name (lowercase), the first letter of their last name (lowercase), the last letter of their last name (lowercase), the number of letters in their first name, the number of letters in their last name, and then the name of the company they are working with, all capitalized with no spaces.*/
+
+WITH t1 AS (
+	SELECT name, primary_poc,
+	POSITION(' ' IN primary_poc) as space_position,
+    LEFT(primary_poc, POSITION(' ' IN primary_poc) - 1) AS first_name,
+    RIGHT(primary_poc, LENGTH(primary_poc) -POSITION(' ' IN primary_poc)) AS last_name
+FROM accounts)
+          
+SELECT first_name, last_name, CONCAT(LOWER(first_name), '.', LOWER(last_name), '@', REPLACE(LOWER(name), ' ', ''), '.com') AS email,
+CONCAT(LOWER(LEFT(first_name, 1)) || LOWER(RIGHT(first_name, 1)) || LOWER(LEFT(last_name, 1)) || LOWER(RIGHT(last_name, 1)) || LENGTH(first_name) || LENGTH(last_name) || UPPER(REPLACE(name, ' ', ''))) AS password
+FROM t1;
+
+/*Put the date in the correct format*/
+
+SELECT date orig_date, 
+(SUBSTR(date, 7, 4) || '-' || SUBSTR(date, 1, 2) || '-' || SUBSTR(date, 4, 2))::date new_date
+FROM sf_crime_data
+LIMIT 10;
+
+/*Run the query entered below in the SQL workspace to notice the row with missing data.*/
+
+SELECT *
+FROM accounts a
+LEFT JOIN orders o
+ON a.id = o.account_id
+WHERE o.total IS NULL; 
+
+/*Use COALESCE to fill in the accounts.id column with the account.id for the NULL value for the table in 1.*/
+
+SELECT COALESCE(a.id, a.id) filled_id, a.name, a.website, a.lat, a.long, a.primary_poc, a.sales_rep_id, o.*
+FROM accounts a
+LEFT JOIN orders o
+ON a.id = o.account_id
+WHERE o.total IS NULL;
+
+/*Use COALESCE to fill in the orders.account_id column with the account.id for the NULL value for the table in 1.*/
+
+SELECT COALESCE(a.id, a.id) filled_id, a.name, a.website, a.lat, a.long, a.primary_poc, a.sales_rep_id, COALESCE(o.account_id, a.id) account_id, o.occurred_at, o.standard_qty, o.gloss_qty, o.poster_qty, o.total, o.standard_amt_usd, o.gloss_amt_usd, o.poster_amt_usd, o.total_amt_usd
+FROM accounts a
+LEFT JOIN orders o
+ON a.id = o.account_id
+WHERE o.total IS NULL;
+
+/*Use COALESCE to fill in each of the qty and usd columns with 0 for the table in 1.*/
+
+SELECT COALESCE(a.id, a.id) filled_id, a.name, a.website, a.lat, a.long, a.primary_poc, a.sales_rep_id, COALESCE(o.account_id, a.id) account_id, o.occurred_at, COALESCE(o.standard_qty, 0) standard_qty, COALESCE(o.gloss_qty,0) gloss_qty, COALESCE(o.poster_qty,0) poster_qty, COALESCE(o.total,0) total, COALESCE(o.standard_amt_usd,0) standard_amt_usd, COALESCE(o.gloss_amt_usd,0) gloss_amt_usd, COALESCE(o.poster_amt_usd,0) poster_amt_usd, COALESCE(o.total_amt_usd,0) total_amt_usd
+FROM accounts a
+LEFT JOIN orders o
+ON a.id = o.account_id
+WHERE o.total IS NULL;
+
+/*Run the query in 1 with the WHERE removed and COUNT the number of ids.*/
+
+SELECT COUNT(*)
+FROM accounts a
+LEFT JOIN orders o
+ON a.id = o.account_id;
+
+/*Run the query in 5, but with the COALESCE function used in questions 2 through 4.*/
+
+SELECT COALESCE(a.id, a.id) filled_id, a.name, a.website, a.lat, a.long, a.primary_poc, a.sales_rep_id, COALESCE(o.account_id, a.id) account_id, o.occurred_at, COALESCE(o.standard_qty, 0) standard_qty, COALESCE(o.gloss_qty,0) gloss_qty, COALESCE(o.poster_qty,0) poster_qty, COALESCE(o.total,0) total, COALESCE(o.standard_amt_usd,0) standard_amt_usd, COALESCE(o.gloss_amt_usd,0) gloss_amt_usd, COALESCE(o.poster_amt_usd,0) poster_amt_usd, COALESCE(o.total_amt_usd,0) total_amt_usd
+FROM accounts a
+LEFT JOIN orders o
+ON a.id = o.account_id;
+
+
+/*******************************************************WINDOW FUNCTIONS***************************************/
+
+/*create a running total of standard_amt_usd (in the orders table) over order time with no date truncation. Your final table should have two columns: one with the amount being added for each new row, and a second with the running total.*/
+
+SELECT standard_amt_usd,
+SUM(standard_amt_usd) OVER (ORDER BY occurred_at) AS running_total
+FROM orders;
+
+/*with date truncation by month*/
+
+SELECT standard_amt_usd,
+DATE_TRUNC('month', occurred_at) AS month,
+SUM(standard_amt_usd) OVER (PARTITION BY DATE_TRUNC('month', occurred_at) ORDER BY occurred_at) AS running_total
+FROM orders;
+
+
 
 
 
