@@ -1097,8 +1097,86 @@ SELECT id,
     RANK() OVER (PARTITION BY account_id ORDER BY total DESC) AS total_rank
 FROM orders;
 
+/*The ORDER BY clause is one of two clauses integral to window functions. The ORDER and PARTITION define what is referred to as the “window”—the ordered subset of data over which calculations are made. Removing ORDER BY just leaves an unordered partition; in our query's case, each column's value is simply an aggregation (e.g., sum, count, average, minimum, or maximum) of all the standard_qty values in its respective account_id.*/
 
+SELECT id,
+       account_id,
+       standard_qty,
+       DATE_TRUNC('month', occurred_at) AS month,
+       DENSE_RANK() OVER (PARTITION BY account_id) AS dense_rank,
+       SUM(standard_qty) OVER (PARTITION BY account_id) AS sum_std_qty,
+       COUNT(standard_qty) OVER (PARTITION BY account_id) AS count_std_qty,
+       AVG(standard_qty) OVER (PARTITION BY account_id) AS avg_std_qty,
+       MIN(standard_qty) OVER (PARTITION BY account_id) AS min_std_qty,
+       MAX(standard_qty) OVER (PARTITION BY account_id) AS max_std_qty
+FROM orders
 
+/*create and use an alias to shorten the following query (which is different than the one in Derek's previous video) that has multiple window functions. Name the alias account_year_window, which is more descriptive than main_window in the example above.*/
+
+SELECT id,
+       account_id,
+       DATE_TRUNC('year',occurred_at) AS year,
+       DENSE_RANK() OVER (PARTITION BY account_id ORDER BY DATE_TRUNC('year',occurred_at)) AS dense_rank,
+       total_amt_usd,
+       SUM(total_amt_usd) OVER (PARTITION BY account_id ORDER BY DATE_TRUNC('year',occurred_at)) AS sum_total_amt_usd,
+       COUNT(total_amt_usd) OVER (PARTITION BY account_id ORDER BY DATE_TRUNC('year',occurred_at)) AS count_total_amt_usd,
+       AVG(total_amt_usd) OVER (PARTITION BY account_id ORDER BY DATE_TRUNC('year',occurred_at)) AS avg_total_amt_usd,
+       MIN(total_amt_usd) OVER (PARTITION BY account_id ORDER BY DATE_TRUNC('year',occurred_at)) AS min_total_amt_usd,
+       MAX(total_amt_usd) OVER (PARTITION BY account_id ORDER BY DATE_TRUNC('year',occurred_at)) AS max_total_amt_usd
+FROM orders
+
+/*same as*/
+
+SELECT id,
+       account_id,
+       DATE_TRUNC('year',occurred_at) AS year,
+       DENSE_RANK() OVER account_year_window AS dense_rank,
+       total_amt_usd,
+       SUM(total_amt_usd) OVER account_year_window AS sum_total_amt_usd,
+       COUNT(total_amt_usd) OVER account_year_window AS count_total_amt_usd,
+       AVG(total_amt_usd) OVER account_year_window AS avg_total_amt_usd,
+       MIN(total_amt_usd) OVER account_year_window AS min_total_amt_usd,
+       MAX(total_amt_usd) OVER account_year_window AS max_total_amt_usd
+FROM orders
+WINDOW account_year_window AS (PARTITION BY account_id ORDER BY DATE_TRUNC('year',occurred_at));
+
+/*Modify Derek's query from the previous video in the SQL Explorer below to perform this analysis. You'll need to use occurred_at and total_amt_usd in the orders table along with LEAD to do so. In your query results, there should be four columns: occurred_at, total_amt_usd, lead, and lead_difference.*/
+
+SELECT account_id,
+       standard_sum,
+       LAG(standard_sum) OVER (ORDER BY standard_sum) AS lag,
+       LEAD(standard_sum) OVER (ORDER BY standard_sum) AS lead,
+       standard_sum - LAG(standard_sum) OVER (ORDER BY standard_sum) AS lag_difference,
+       LEAD(standard_sum) OVER (ORDER BY standard_sum) - standard_sum AS lead_difference
+FROM (
+SELECT account_id,
+       SUM(standard_qty) AS standard_sum
+  FROM orders 
+ GROUP BY 1
+ ) sub
+
+ /*modified*/
+
+ SELECT occurred_at,
+	total_sum,
+    LEAD(total_sum) OVER (ORDER BY occurred_at) AS lead,
+    LEAD(total_sum) OVER (ORDER BY occurred_at) - total_sum AS lead_diff
+FROM (
+  SELECT occurred_at, SUM(total_amt_usd) AS total_sum
+  FROM orders
+  GROUP BY 1) sub
+
+  /*Use the NTILE functionality to divide the accounts into 4 levels in terms of the amount of standard_qty for their orders. Your resulting table should have the account_id, the occurred_at time for each order, the total amount of standard_qty paper purchased, and one of four levels in a standard_quartile column.*/
+
+SELECT
+       account_id,
+       occurred_at,
+       standard_qty,
+       NTILE(4) OVER (PARTITION BY account_id ORDER BY standard_qty) AS standard_quartile
+FROM orders 
+ORDER BY account_id DESC
+
+/*    
 
 
 
