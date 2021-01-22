@@ -6,7 +6,7 @@ FROM actor a
 JOIN film_actor fa
 	ON fa.actor_id = a.actor_id  
 JOIN film f
-	ON f.film_id = fa.film_id 
+	ON f.film_id = fa.film_id;
 
 /*Write a query that creates a list of actors and movies where the movie length was more than 60 minutes.
 How many rows are there in this query result? 4900 rows*/
@@ -20,7 +20,19 @@ JOIN film f
 WHERE f.length > 60;
 
 /*Write a query that captures the actor id, full name of the actor, and counts the number of movies each actor has made. (HINT: Think about whether you should group by actor id or the full name of the actor.)
-Identify the actor who has made the maximum number movies.*/
+Identify the actor who has made the maximum number movies: Gina Degeneres (42)*/
+
+WITH t1 AS (
+	SELECT a.actor_id id, CONCAT(first_name || ' ' || last_name) AS full_name, f.title title
+	FROM actor a
+	JOIN film_actor fa
+		ON fa.actor_id = a.actor_id  
+	JOIN film f
+		ON f.film_id = fa.film_id)
+SELECT id, full_name, COUNT(*)
+FROM t1
+GROUP BY 1, 2
+ORDER BY 3 DESC;
 
 
 
