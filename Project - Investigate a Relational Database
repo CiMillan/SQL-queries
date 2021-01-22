@@ -1,0 +1,26 @@
+/*Let's start with creating a table that provides the following details: actor's first and last name combined as full_name, film title, film description and length of the movie.
+How many rows are there in the table? 5462 rows*/
+
+SELECT CONCAT(first_name || ' ' || last_name) AS full_name, f.title title, f.description description, f.length length
+FROM actor a
+JOIN film_actor fa
+	ON fa.actor_id = a.actor_id  
+JOIN film f
+	ON f.film_id = fa.film_id 
+
+/*Write a query that creates a list of actors and movies where the movie length was more than 60 minutes.
+How many rows are there in this query result? 4900 rows*/
+
+SELECT CONCAT(first_name || ' ' || last_name) AS full_name, f.title title, f.length length
+FROM actor a
+JOIN film_actor fa
+	ON fa.actor_id = a.actor_id  
+JOIN film f
+	ON f.film_id = fa.film_id 
+WHERE f.length > 60;
+
+/*Write a query that captures the actor id, full name of the actor, and counts the number of movies each actor has made. (HINT: Think about whether you should group by actor id or the full name of the actor.)
+Identify the actor who has made the maximum number movies.*/
+
+
+
