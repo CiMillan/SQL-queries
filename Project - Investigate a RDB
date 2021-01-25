@@ -124,7 +124,31 @@ FROM
 			ON f.film_id = fc.film_id
 		JOIN category c
 			ON fc.category_id = c.category_id
-		GROUP BY 1, 2
-		ORDER BY 2) t1
+		GROUP BY 2, 1) t1
 	) t2
 WHERE category IN ('Animation','Children','Classics', 'Comedy','Family','Music');
+
+/*Question 3
+Finally, provide a table with the family-friendly film category, each of the quartiles, 
+and the corresponding count of movies within each combination of film category for each corresponding rental duration category.
+The resulting table should have three columns: Category, Rental length category, Count.*/
+
+SELECT category, standard_quartile, COUNT (*)
+FROM
+	(SELECT film_title, category, rental_duration, NTILE(4) OVER (ORDER BY rental_duration) AS standard_quartile
+	FROM
+		(SELECT f.title film_title, c.name category,
+		ROUND(AVG(DATE_PART('day', return_date - rental_date))) AS rental_duration
+		FROM rental r
+		JOIN inventory i
+			ON r.inventory_id = i.inventory_id
+		JOIN film f
+			ON i.film_id = f.film_id
+		JOIN film_category fc
+			ON f.film_id = fc.film_id
+		JOIN category c
+			ON fc.category_id = c.category_id
+		GROUP BY 2, 1) t1
+	) t2
+WHERE category IN ('Animation','Children','Classics', 'Comedy','Family','Music')
+GROUP BY 1, 2;
